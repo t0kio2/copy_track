@@ -29,9 +29,14 @@ export async function getAccessToken(): Promise<string | null> {
   return s?.access_token ?? null;
 }
 
-export function onAuthStateChange(cb: () => void) {
+export function onAuthStateChange(cb: (session: any | null) => void) {
   const supabase = getSupabaseClient();
-  const { data: sub } = supabase.auth.onAuthStateChange(() => cb());
+  // 初期セッションを即時通知
+  supabase.auth
+    .getSession()
+    .then(({ data }) => cb(data.session ?? null))
+    .catch(() => cb(null));
+  // 以降の変化はイベントから直接 session を受け取って反映
+  const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => cb(session));
   return () => sub.subscription.unsubscribe();
 }
-

@@ -1,24 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSession, onAuthStateChange, signInWithGoogle, signOut } from "@/app/lib/auth";
+import { onAuthStateChange, signInWithGoogle, signOut } from "@/app/lib/auth";
 
 export default function AuthBar() {
   const [email, setEmail] = useState<string | null>(null);
   useEffect(() => {
-    let disposed = false;
-    (async () => {
-      const s = await getSession();
-      if (!disposed) setEmail(s?.user?.email ?? null);
-    })();
-    const off = onAuthStateChange(async () => {
-      const s = await getSession();
-      if (!disposed) setEmail(s?.user?.email ?? null);
+    const off = onAuthStateChange((s) => {
+      setEmail(s?.user?.email ?? null);
     });
-    return () => {
-      disposed = true;
-      off();
-    };
+    return () => off();
   }, []);
   return (
     <div className="flex items-center justify-end gap-2 text-sm">
@@ -37,4 +28,3 @@ export default function AuthBar() {
     </div>
   );
 }
-
