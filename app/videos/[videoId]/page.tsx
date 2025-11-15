@@ -69,8 +69,8 @@ export default function VideoDetailPage() {
   // 時間カーソル（縦バー）
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [cursorX, setCursorX] = useState<number | null>(null);
-  const [cursorSec, setCursorSec] = useState<number | null>(null);
+  const [cursorX, setCursorX] = useState<number>(0);
+  const [cursorSec, setCursorSec] = useState<number>(0);
   const [dragging, setDragging] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -166,10 +166,7 @@ export default function VideoDetailPage() {
     stopAutoScroll();
   };
   const onPointerLeave = () => {
-    if (!dragging) {
-      setCursorX(null);
-      setCursorSec(null);
-    }
+    // バーは常に表示したいので座標は保持したままにする
     stopAutoScroll();
   };
 
@@ -233,48 +230,94 @@ export default function VideoDetailPage() {
                 {/* ブロック本体 */}
                 <div
                   ref={contentRef}
-                  className="relative inline-flex items-end gap-1"
+                  className="relative inline-flex items-end gap-1 pb-8"
                   onPointerDown={onPointerDown}
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
                   onPointerLeave={onPointerLeave}
                 >
-                {track.levels.map((level, idx) => (
-                  <div
-                    key={idx}
-                    data-col={idx}
-                    className="flex cursor-pointer flex-col items-stretch gap-1"
-                    onClick={() => {
-                      if (!dragging) toggle(idx);
-                    }}
-                  >
-                      {/* 上=3, 中=2, 下=1 の順に表示 */}
-                      <Cell filled={level >= 3} />
-                      <Cell filled={level >= 2} />
-                      <Cell filled={level >= 1} />
-                      <div className="text-center text-[10px] text-zinc-500">{(idx * blockSizeSec).toString()}</div>
-                    </div>
-                  ))}
-
-                  {cursorX !== null && (
-                    <>
-                      <div
-                        className="pointer-events-none absolute top-0 bottom-0 w-px bg-emerald-600"
-                        style={{ left: `${cursorX}px` }}
-                      />
-                      <div
-                        className="pointer-events-none absolute -top-5 -translate-x-1/2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white"
-                        style={{ left: `${cursorX}px` }}
+                {track.levels.map((level, idx) => {
+                  const lv = level || 0;
+                  const bottomOn = lv >= 1;
+                  const middleOn = lv >= 2;
+                  const topOn = lv >= 3;
+                  const toggleCell = (tier: 1 | 2 | 3) => {
+                    if (!track) return;
+                    const current = track.levels[idx] ?? 0;
+                    // ルール:
+                    // - 上段は下段がONでないと操作不可
+                    // - OFFにする時は上段も連動でOFF
+                    if (tier === 1) {
+                      const next = current >= 1 ? 0 : 1;
+                      setLevel(idx, next);
+                      return;
+                    }
+                    if (tier === 2) {
+                      if (current < 1) return; // 下段がOFFなら無効
+                      const next = current >= 2 ? 1 : 2;
+                      setLevel(idx, next);
+                      return;
+                    }
+                    if (tier === 3) {
+                      if (current < 2) return; // 中段がOFFなら無効
+                      const next = current >= 3 ? 2 : 3;
+                      setLevel(idx, next);
+                      return;
+                    }
+                  };
+                  return (
+                    <div
+                      key={idx}
+                      data-col={idx}
+                      className="flex flex-col items-stretch gap-1"
+                    >
+                      {/* 上=3, 中=2, 下=1 の順に表示（各段を個別タップでON/OFF） */}
+                      <button
+                        type="button"
+                        className="outline-none"
+                        onClick={() => toggleCell(3)}
+                        aria-label="上段トグル"
                       >
-                        {formatDuration(cursorSec ?? 0)}
-                      </div>
-                    </>
-                  )}
+                        <Cell filled={topOn} />
+                      </button>
+                      <button
+                        type="button"
+                        className="outline-none"
+                        onClick={() => toggleCell(2)}
+                        aria-label="中段トグル"
+                      >
+                        <Cell filled={middleOn} />
+                      </button>
+                      <button
+                        type="button"
+                        className="outline-none"
+                        onClick={() => toggleCell(1)}
+                        aria-label="下段トグル"
+                      >
+                        <Cell filled={bottomOn} />
+                      </button>
+                      <div className="text-center text-[10px] text-zinc-500">{formatDuration(idx * blockSizeSec)}</div>
+                    </div>
+                  );
+                })}
+
+                  <>
+                    <div
+                      className="pointer-events-none absolute top-0 bottom-0 w-px bg-emerald-600"
+                      style={{ left: `${cursorX}px` }}
+                    />
+                    <div
+                      className="pointer-events-none absolute -top-5 -translate-x-1/2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white"
+                      style={{ left: `${cursorX}px` }}
+                    >
+                      {formatDuration(cursorSec)}
+                    </div>
+                  </>
                 </div>
               </div>
             </div>
           )}
-          <p className="mt-2 text-xs text-zinc-500">上=高レベル、下=低レベル。クリックで 0→1→2→3→0 と変化（長押しで 0 クリアは今後対応）。</p>
+          <p className="mt-2 text-xs text-zinc-500">上=高レベル、下=低レベル。各段を個別にタップでON/OFF。上段は下段がONのときのみONにでき、下段をOFFにすると上段もOFFになります。</p>
         </section>
       </main>
       {editOpen && track && (
