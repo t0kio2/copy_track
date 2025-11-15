@@ -69,8 +69,8 @@ export default function VideoDetailPage() {
   // 時間カーソル（縦バー）
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [cursorX, setCursorX] = useState<number | null>(null);
-  const [cursorSec, setCursorSec] = useState<number | null>(null);
+  const [cursorX, setCursorX] = useState<number>(0);
+  const [cursorSec, setCursorSec] = useState<number>(0);
   const [dragging, setDragging] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -166,10 +166,7 @@ export default function VideoDetailPage() {
     stopAutoScroll();
   };
   const onPointerLeave = () => {
-    if (!dragging) {
-      setCursorX(null);
-      setCursorSec(null);
-    }
+    // バーは常に表示したいので座標は保持したままにする
     stopAutoScroll();
   };
 
@@ -233,7 +230,7 @@ export default function VideoDetailPage() {
                 {/* ブロック本体 */}
                 <div
                   ref={contentRef}
-                  className="relative inline-flex items-end gap-1"
+                  className="relative inline-flex items-end gap-1 pb-8"
                   onPointerDown={onPointerDown}
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
@@ -252,24 +249,22 @@ export default function VideoDetailPage() {
                       <Cell filled={level >= 3} />
                       <Cell filled={level >= 2} />
                       <Cell filled={level >= 1} />
-                      <div className="text-center text-[10px] text-zinc-500">{(idx * blockSizeSec).toString()}</div>
+                      <div className="text-center text-[10px] text-zinc-500">{formatDuration(idx * blockSizeSec)}</div>
                     </div>
                   ))}
 
-                  {cursorX !== null && (
-                    <>
-                      <div
-                        className="pointer-events-none absolute top-0 bottom-0 w-px bg-emerald-600"
-                        style={{ left: `${cursorX}px` }}
-                      />
-                      <div
-                        className="pointer-events-none absolute -top-5 -translate-x-1/2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white"
-                        style={{ left: `${cursorX}px` }}
-                      >
-                        {formatDuration(cursorSec ?? 0)}
-                      </div>
-                    </>
-                  )}
+                  <>
+                    <div
+                      className="pointer-events-none absolute top-0 bottom-0 w-px bg-emerald-600"
+                      style={{ left: `${cursorX}px` }}
+                    />
+                    <div
+                      className="pointer-events-none absolute -top-5 -translate-x-1/2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white"
+                      style={{ left: `${cursorX}px` }}
+                    >
+                      {formatDuration(cursorSec)}
+                    </div>
+                  </>
                 </div>
               </div>
             </div>
